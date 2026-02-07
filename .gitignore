@@ -5,3 +5,7 @@ out/
 .vercel
 *.log
 .DS_Store
+
+dist/
+build/
+.env
