@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { scheduleApi } from '@/lib/api';
 import {
   Upload, Plus, Trash2, Clock, Tag, CalendarDays,
-  FileText, AlertCircle, CheckCircle2, Loader2, X
+  FileText, AlertCircle, CheckCircle2, Loader2, X, Edit2, Trash
 } from 'lucide-react';
 
 interface TaskTemplate {
   id: string;
   name: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   category?: string;
   description?: string;
   daysOfWeek: string[];
@@ -25,10 +26,12 @@ export default function SchedulePage() {
   const [uploadMessage, setUploadMessage] = useState('');
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [newTemplate, setNewTemplate] = useState({
-    name: '', time: '', category: '', description: '', daysOfWeek: [] as string[],
+    name: '', startTime: '', endTime: '', category: '', description: '', daysOfWeek: [] as string[],
   });
   const [dragOver, setDragOver] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadTemplates(); }, []);
 
@@ -74,21 +77,68 @@ export default function SchedulePage() {
     } catch (err) { alert('Failed to delete template'); }
   };
 
-  const handleAddTemplate = async () => {
-    if (!newTemplate.name || !newTemplate.time) return;
+  const handleDeleteAll = async () => {
+    if (!confirm(`Delete all ${templates.length} templates? This cannot be undone.`)) return;
     try {
-      await scheduleApi.createTemplate({
-        name: newTemplate.name,
-        time: newTemplate.time,
-        category: newTemplate.category || undefined,
-        description: newTemplate.description || undefined,
-        daysOfWeek: newTemplate.daysOfWeek.join(',') || undefined,
+      const result = await scheduleApi.deleteAllTemplates();
+      setTemplates([]);
+      setUploadMessage(result.data.message);
+    } catch (err) {
+      setError('Failed to delete all templates');
+    }
+  };
+
+  const handleEdit = (template: TaskTemplate) => {
+    setEditingTemplate(template);
+    setNewTemplate({
+      name: template.name,
+      startTime: template.startTime,
+      endTime: template.endTime,
+      category: template.category || '',
+      description: template.description || '',
+      daysOfWeek: template.daysOfWeek,
+    });
+    setShowAddForm(true);
+    
+    // Smooth scroll to form with a slight delay to ensure form is rendered
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start',
       });
-      setNewTemplate({ name: '', time: '', category: '', description: '', daysOfWeek: [] });
+    }, 50);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!newTemplate.name || !newTemplate.startTime || !newTemplate.endTime) return;
+    try {
+      if (editingTemplate) {
+        await scheduleApi.updateTemplate(editingTemplate.id, {
+          name: newTemplate.name,
+          startTime: newTemplate.startTime,
+          endTime: newTemplate.endTime,
+          category: newTemplate.category || undefined,
+          description: newTemplate.description || undefined,
+          daysOfWeek: newTemplate.daysOfWeek.join(',') || undefined,
+        });
+        setUploadMessage('Template updated successfully');
+      } else {
+        await scheduleApi.createTemplate({
+          name: newTemplate.name,
+          startTime: newTemplate.startTime,
+          endTime: newTemplate.endTime,
+          category: newTemplate.category || undefined,
+          description: newTemplate.description || undefined,
+          daysOfWeek: newTemplate.daysOfWeek.join(',') || undefined,
+        });
+        setUploadMessage('Template created successfully');
+      }
+      setNewTemplate({ name: '', startTime: '', endTime: '', category: '', description: '', daysOfWeek: [] });
       setShowAddForm(false);
+      setEditingTemplate(null);
       loadTemplates();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to create template');
+      setError(err.response?.data?.error || `Failed to ${editingTemplate ? 'update' : 'create'} template`);
     }
   };
 
@@ -112,7 +162,13 @@ export default function SchedulePage() {
           </p>
         </div>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            setShowAddForm(!showAddForm);
+            if (showAddForm) {
+              setEditingTemplate(null);
+              setNewTemplate({ name: '', startTime: '', endTime: '', category: '', description: '', daysOfWeek: [] });
+            }
+          }}
           className="btn-primary inline-flex items-center gap-2"
         >
           {showAddForm ? <X size={18} /> : <Plus size={18} />}
@@ -142,16 +198,25 @@ export default function SchedulePage() {
 
       {/* Add Template Form */}
       {showAddForm && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">New Task Template</h3>
+        <div 
+          ref={formRef}
+          className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 scroll-mt-6 animate-in fade-in slide-in-from-top-4 duration-300"
+        >
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            {editingTemplate ? 'Edit Task Template' : 'New Task Template'}
+          </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">Name *</label>
               <input type="text" value={newTemplate.name} onChange={e => setNewTemplate({...newTemplate, name: e.target.value})} className="input-field" placeholder="e.g., Morning Prayer" />
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">Time *</label>
-              <input type="time" value={newTemplate.time} onChange={e => setNewTemplate({...newTemplate, time: e.target.value})} className="input-field" />
+              <label className="text-sm font-medium text-slate-700 mb-1 block">Start Time *</label>
+              <input type="time" value={newTemplate.startTime} onChange={e => setNewTemplate({...newTemplate, startTime: e.target.value})} className="input-field" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-1 block">End Time *</label>
+              <input type="time" value={newTemplate.endTime} onChange={e => setNewTemplate({...newTemplate, endTime: e.target.value})} className="input-field" />
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">Category</label>
@@ -180,27 +245,45 @@ export default function SchedulePage() {
               ))}
             </div>
           </div>
-          <button onClick={handleAddTemplate} disabled={!newTemplate.name || !newTemplate.time} className="btn-primary mt-4 disabled:opacity-50">
-            Create Template
+          <button onClick={handleSaveTemplate} disabled={!newTemplate.name || !newTemplate.startTime || !newTemplate.endTime} className="btn-primary mt-4 disabled:opacity-50">
+            {editingTemplate ? 'Update Template' : 'Create Template'}
           </button>
         </div>
       )}
 
       {/* CSV Upload */}
       <div
-        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={e => { e.preventDefault(); if (!uploading) setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        className={`bg-white rounded-2xl shadow-sm border-2 border-dashed transition-all p-8 text-center ${
-          dragOver ? 'border-sky-400 bg-sky-50' : 'border-slate-200 hover:border-slate-300'
+        className={`bg-white rounded-2xl shadow-sm border-2 border-dashed transition-all p-8 text-center relative ${
+          uploading 
+            ? 'border-sky-400 bg-sky-50/50 pointer-events-none' 
+            : dragOver 
+              ? 'border-sky-400 bg-sky-50' 
+              : 'border-slate-200 hover:border-slate-300'
         }`}
       >
-        <Upload size={40} className={`mx-auto mb-3 ${dragOver ? 'text-sky-500' : 'text-slate-300'}`} />
+        {uploading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] rounded-2xl flex items-center justify-center z-10">
+            <div className="text-center">
+              <Loader2 size={48} className="animate-spin text-sky-500 mx-auto mb-3" />
+              <p className="text-base font-semibold text-sky-600">Uploading CSV...</p>
+              <p className="text-sm text-slate-500 mt-1">Processing your schedule</p>
+            </div>
+          </div>
+        )}
+        
+        <Upload size={40} className={`mx-auto mb-3 transition-all ${
+          uploading ? 'text-sky-400 opacity-50' : dragOver ? 'text-sky-500' : 'text-slate-300'
+        }`} />
         <h3 className="text-base font-semibold text-slate-700 mb-1">
-          {uploading ? 'Uploading...' : 'Upload Schedule CSV'}
+          Upload Schedule CSV
         </h3>
         <p className="text-sm text-slate-500 mb-4">Drag & drop or click to browse</p>
-        <label className="btn-secondary inline-flex items-center gap-2 cursor-pointer">
+        <label className={`btn-secondary inline-flex items-center gap-2 ${
+          uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        }`}>
           <FileText size={16} />
           Choose File
           <input type="file" accept=".csv" className="hidden" onChange={e => {
@@ -209,11 +292,47 @@ export default function SchedulePage() {
             e.target.value = '';
           }} disabled={uploading} />
         </label>
-        <div className="mt-4 bg-slate-50 rounded-xl p-4 text-left max-w-md mx-auto">
-          <p className="text-xs font-semibold text-slate-600 mb-1">CSV Format:</p>
-          <code className="text-xs text-slate-500 block">name,time,category,description,daysOfWeek</code>
-          <code className="text-xs text-slate-400 block mt-1">Prayer,06:00,Spiritual,Morning Prayer,</code>
-          <code className="text-xs text-slate-400 block">Workout,07:00,Fitness,Gym,MON,WED,FRI</code>
+        <div className="mt-4 bg-slate-50 rounded-xl p-6 text-left max-w-lg mx-auto border border-slate-100">
+          <h4 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <FileText size={16} className="text-sky-500" />
+            CSV Formatting Guide
+          </h4>
+          
+          <div className="space-y-3 text-xs text-slate-600">
+            <div>
+              <p className="font-medium text-slate-700 mb-1">Required Columns:</p>
+              <code className="bg-white px-2 py-1 rounded border border-slate-200 block text-slate-500 font-mono">
+                name, startTime, endTime
+              </code>
+            </div>
+
+            <div>
+              <p className="font-medium text-slate-700 mb-1">Optional Columns:</p>
+              <code className="bg-white px-2 py-1 rounded border border-slate-200 block text-slate-500 font-mono">
+                category, description, daysOfWeek
+              </code>
+            </div>
+
+            <div>
+              <p className="font-medium text-slate-700 mb-1">Example Row:</p>
+              <code className="bg-white px-2 py-2 rounded border border-slate-200 block text-slate-500 font-mono overflow-x-auto whitespace-pre">
+                Prayer,06:00,06:15,Spiritual,Morning Prayer,"MON,WED,FRI"
+              </code>
+              <code className="bg-white px-2 py-2 rounded border border-slate-200 block text-slate-500 font-mono overflow-x-auto whitespace-pre mt-1">
+                Deep Work,09:00,11:30,Work,Focus time,
+              </code>
+            </div>
+
+            <div className="bg-sky-50 p-3 rounded-lg border border-sky-100">
+              <p className="font-medium text-sky-800 mb-1">💡 Tips:</p>
+              <ul className="list-disc list-inside space-y-1 text-sky-700">
+                <li>Time format must be 24-hour <span className="font-mono bg-sky-100 px-1 rounded">HH:MM</span> (e.g., 14:30)</li>
+                <li>Days must be 3-letter codes (MON, TUE, etc.)</li>
+                <li>Leave <span className="font-mono bg-sky-100 px-1 rounded">daysOfWeek</span> empty for daily tasks</li>
+                <li>Wrap fields in quotes if they contain commas</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -224,6 +343,15 @@ export default function SchedulePage() {
             Templates
             <span className="ml-2 text-sm font-normal text-slate-400">({templates.length})</span>
           </h2>
+          {templates.length > 0 && (
+            <button
+              onClick={handleDeleteAll}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <Trash size={14} />
+              Delete All
+            </button>
+          )}
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -245,7 +373,7 @@ export default function SchedulePage() {
                       <h3 className="font-semibold text-slate-900">{t.name}</h3>
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md">
                         <Clock size={10} />
-                        {t.time}
+                        {t.startTime} - {t.endTime}
                       </span>
                       {t.category && (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">
@@ -267,12 +395,20 @@ export default function SchedulePage() {
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDelete(t.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleEdit(t)}
+                      className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-sky-50 text-slate-400 hover:text-sky-600 transition-all"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(t.id)}
+                      className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

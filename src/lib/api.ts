@@ -57,12 +57,22 @@ export const scheduleApi = {
   getTemplates: () => api.get("/api/schedule/templates"),
   createTemplate: (data: {
     name: string;
-    time: string;
+    startTime: string;
+    endTime: string;
     category?: string;
     description?: string;
     daysOfWeek?: string;
   }) => api.post("/api/schedule/templates", data),
+  updateTemplate: (id: string, data: {
+    name: string;
+    startTime: string;
+    endTime: string;
+    category?: string;
+    description?: string;
+    daysOfWeek?: string;
+  }) => api.put(`/api/schedule/templates/${id}`, data),
   deleteTemplate: (id: string) => api.delete(`/api/schedule/templates/${id}`),
+  deleteAllTemplates: () => api.delete("/api/schedule/templates"),
 };
 
 // Tasks API
@@ -73,7 +83,7 @@ export const tasksApi = {
     api.patch(`/api/tasks/${id}/complete`, data),
   updateTask: (id: string, data: { notes?: string; imageUrl?: string; aiData?: object }) =>
     api.patch(`/api/tasks/${id}`, data),
-  createTask: (data: { name: string; date: string; time: string; category?: string }) =>
+  createTask: (data: { name: string; date: string; startTime: string; endTime: string; category?: string }) =>
     api.post("/api/tasks", data),
   deleteTask: (id: string) => api.delete(`/api/tasks/${id}`),
 };

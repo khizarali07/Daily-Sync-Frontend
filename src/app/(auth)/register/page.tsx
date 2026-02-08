@@ -25,8 +25,10 @@ export default function RegisterPage() {
 
     try {
       const response = await authApi.register(formData);
+      // Don't set full auth yet, just store email for verification page if needed
+      // Or setAuth but handle redirect to verify-email
       setAuth(response.data.user, response.data.token);
-      router.push("/dashboard");
+      router.push("/verify-email");
     } catch (err: any) {
       setError(err.response?.data?.error || "Registration failed");
     } finally {

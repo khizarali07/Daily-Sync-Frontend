@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { tasksApi } from '@/lib/api';
 import { format, addDays, subDays, isToday, parseISO } from 'date-fns';
 import {
@@ -11,7 +11,8 @@ import {
 interface Task {
   id: string;
   name: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   category?: string;
   description?: string;
   isCompleted: boolean;
@@ -53,10 +54,10 @@ function formatTime12h(time: string): string {
   return `${hour}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-function formatDuration(startTime: string, nextTime?: string): string {
-  if (!nextTime) return '';
+function formatDuration(startTime: string, endTime: string): string {
+  if (!endTime) return '';
   const [h1, m1] = startTime.split(':').map(Number);
-  const [h2, m2] = nextTime.split(':').map(Number);
+  const [h2, m2] = endTime.split(':').map(Number);
   let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
   if (diff <= 0) diff += 24 * 60;
   const hours = Math.floor(diff / 60);
@@ -74,7 +75,7 @@ export default function TodayPage() {
   const [noteText, setNoteText] = useState('');
   const [missedText, setMissedText] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTask, setNewTask] = useState({ name: '', time: '', category: '' });
+  const [newTask, setNewTask] = useState({ name: '', startTime: '', endTime: '', category: '' });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -132,15 +133,16 @@ export default function TodayPage() {
   };
 
   const handleAddTask = async () => {
-    if (!newTask.name || !newTask.time) return;
+    if (!newTask.name || !newTask.startTime || !newTask.endTime) return;
     try {
       await tasksApi.createTask({
         name: newTask.name,
         date: dateStr,
-        time: newTask.time,
+        startTime: newTask.startTime,
+        endTime: newTask.endTime,
         category: newTask.category || undefined,
       });
-      setNewTask({ name: '', time: '', category: '' });
+      setNewTask({ name: '', startTime: '', endTime: '', category: '' });
       setShowAddTask(false);
       loadTasks();
     } catch (err) {
@@ -241,42 +243,191 @@ export default function TodayPage() {
             </button>
           </div>
         ) : (
-          tasks.map((task, index) => {
-            const cat = getCategory(task.category);
-            const nextTask = tasks[index + 1];
-            const duration = nextTask ? formatDuration(task.time, nextTask.time) : '';
-            const isExpanded = activeTask === task.id;
+          (() => {
+            // Group overlapping tasks
+            const taskGroups: Task[][] = [];
+            let currentGroup: Task[] = [];
 
-            return (
-              <div key={task.id} className="flex gap-3">
-                {/* Time Column */}
-                <div className="w-16 flex-shrink-0 text-right pt-4">
-                  <span className="text-xs font-semibold text-slate-400">
-                    {formatTime12h(task.time)}
-                  </span>
-                </div>
+            tasks.forEach((task, index) => {
+              if (index === 0) {
+                currentGroup.push(task);
+                return;
+              }
 
-                {/* Timeline Line */}
-                <div className="flex flex-col items-center">
-                  <div className={`w-3 h-3 rounded-full mt-5 ${task.isCompleted ? 'bg-emerald-500' : cat.dot} ring-4 ring-white`} />
-                  {index < tasks.length - 1 && (
-                    <div className="w-0.5 flex-1 bg-slate-200 my-1" />
-                  )}
-                </div>
+              const prevTask = currentGroup[currentGroup.length - 1];
+              const [h1, m1] = prevTask.endTime.split(':').map(Number);
+              const [h2, m2] = task.startTime.split(':').map(Number);
+              const prevEndMinutes = h1 * 60 + m1;
+              const currentStartMinutes = h2 * 60 + m2;
 
-                {/* Task Card */}
-                <div className="flex-1 pb-3">
-                  <div
-                    className={`bg-white rounded-xl border ${task.isCompleted ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-100'} shadow-sm hover:shadow-md transition-all cursor-pointer`}
-                    onClick={() => setActiveTask(isExpanded ? null : task.id)}
-                  >
-                    <div className="p-4">
+              // Check if current task overlaps with any task in the current group
+              const overlapsWithGroup = currentGroup.some(groupTask => {
+                const [gh1, gm1] = groupTask.startTime.split(':').map(Number);
+                const [gh2, gm2] = groupTask.endTime.split(':').map(Number);
+                const groupStartMinutes = gh1 * 60 + gm1;
+                const groupEndMinutes = gh2 * 60 + gm2;
+                
+                return (
+                  (currentStartMinutes >= groupStartMinutes && currentStartMinutes < groupEndMinutes) ||
+                  (currentStartMinutes < groupStartMinutes && prevEndMinutes > groupStartMinutes)
+                );
+              });
+
+              if (overlapsWithGroup || currentStartMinutes < prevEndMinutes) {
+                currentGroup.push(task);
+              } else {
+                taskGroups.push([...currentGroup]);
+                currentGroup = [task];
+              }
+            });
+
+            if (currentGroup.length > 0) {
+              taskGroups.push(currentGroup);
+            }
+
+            return taskGroups.map((group, groupIndex) => {
+              const isOverlapGroup = group.length > 1;
+              
+              // Calculate group time range
+              const groupStartTimes = group.map(t => {
+                const [h, m] = t.startTime.split(':').map(Number);
+                return h * 60 + m;
+              });
+              const groupEndTimes = group.map(t => {
+                const [h, m] = t.endTime.split(':').map(Number);
+                return h * 60 + m;
+              });
+              const groupStartMinutes = Math.min(...groupStartTimes);
+              const groupEndMinutes = Math.max(...groupEndTimes);
+
+              // Calculate free time before this group
+              let freeTimeBlock = null;
+              if (groupIndex > 0) {
+                const prevGroup = taskGroups[groupIndex - 1];
+                const prevGroupEndTimes = prevGroup.map(t => {
+                  const [h, m] = t.endTime.split(':').map(Number);
+                  return h * 60 + m;
+                });
+                const prevGroupEndMinutes = Math.max(...prevGroupEndTimes);
+                const gapMinutes = groupStartMinutes - prevGroupEndMinutes;
+
+                if (gapMinutes > 0) {
+                  const prevGroupLastTask = prevGroup[prevGroup.length - 1];
+                  const currentGroupFirstTask = group[0];
+                  const gapHours = Math.floor(gapMinutes / 60);
+                  const gapMins = gapMinutes % 60;
+                  const gapDuration = gapHours > 0 && gapMins > 0 
+                    ? `${gapHours} h ${gapMins} min` 
+                    : gapHours > 0 
+                      ? `${gapHours} h` 
+                      : `${gapMins} min`;
+
+                  freeTimeBlock = (
+                    <div key={`free-${groupIndex}`} className="flex gap-3 mb-3">
+                      <div className="w-16 flex-shrink-0 flex flex-col justify-between text-right py-3">
+                        <span className="text-[10px] font-semibold text-slate-400 leading-tight">
+                          {formatTime12h(prevGroupLastTask.endTime)}
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-400 leading-tight">
+                          {formatTime12h(currentGroupFirstTask.startTime)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center py-3">
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-300 ring-2 ring-white z-10" />
+                        <div className="w-0.5 flex-1 bg-transparent my-0.5 border-l border-dashed border-slate-300" />
+                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-slate-300 ring-2 ring-white z-10" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-xl border border-dashed border-slate-250 shadow-sm py-3 px-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                Free Time
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock size={11} className="text-slate-400" />
+                              <span className="text-[10px] font-semibold text-slate-500">{gapDuration}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              }
+
+              const firstTask = group[0];
+              const lastTask = group[group.length - 1];
+              const groupStartTime = group.reduce((earliest, t) => {
+                const [h1, m1] = earliest.startTime.split(':').map(Number);
+                const [h2, m2] = t.startTime.split(':').map(Number);
+                return (h2 * 60 + m2) < (h1 * 60 + m1) ? t : earliest;
+              }).startTime;
+              
+              const groupEndTime = group.reduce((latest, t) => {
+                const [h1, m1] = latest.endTime.split(':').map(Number);
+                const [h2, m2] = t.endTime.split(':').map(Number);
+                return (h2 * 60 + m2) > (h1 * 60 + m1) ? t : latest;
+              }).endTime;
+
+              return (
+                <React.Fragment key={`group-${groupIndex}`}>
+                  {freeTimeBlock}
+                  <div className={`flex gap-3 mb-3 ${isOverlapGroup ? 'relative' : ''}`}>
+                    {isOverlapGroup && (
+                      <div className="absolute -top-2 left-20 z-20">
+                        <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 shadow-sm">
+                          <AlertCircle size={10} className="text-amber-600" />
+                          <span className="text-[9px] font-bold text-amber-700 uppercase tracking-wide">
+                            {group.length} Overlaps
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Shared Time Column */}
+                    <div className="w-16 flex-shrink-0 flex flex-col justify-between text-right py-4">
+                      <span className={`text-xs font-bold leading-tight ${isOverlapGroup ? 'text-amber-600' : 'text-slate-700'}`}>
+                        {formatTime12h(groupStartTime)}
+                      </span>
+                      <span className={`text-xs font-semibold leading-tight ${isOverlapGroup ? 'text-amber-500' : 'text-slate-500'}`}>
+                        {formatTime12h(groupEndTime)}
+                      </span>
+                    </div>
+
+                    {/* Shared Timeline */}
+                    <div className="flex flex-col items-center py-4">
+                      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${isOverlapGroup ? 'bg-amber-500 animate-pulse' : group[0].isCompleted ? 'bg-emerald-500' : getCategory(group[0].category).dot} ring-4 ring-white shadow-sm z-10`} />
+                      <div className={`w-0.5 flex-1 my-1 rounded-full ${isOverlapGroup ? 'bg-gradient-to-b from-amber-300 to-amber-400' : 'bg-slate-200'}`} />
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${isOverlapGroup ? 'bg-amber-500' : 'bg-rose-500'} ring-4 ring-white shadow-sm z-10`} />
+                    </div>
+
+                    {/* Task Cards Container */}
+                    <div className="flex-1 space-y-2">
+                      {group.map((task) => {
+                        const cat = getCategory(task.category);
+                        const duration = formatDuration(task.startTime, task.endTime);
+                        const isExpanded = activeTask === task.id;
+
+                        return (
+                          <div key={task.id}
+                            className={`bg-white rounded-xl border ${task.isCompleted ? 'border-emerald-200 bg-emerald-50/30' : isOverlapGroup ? 'border-amber-200 bg-amber-50/20' : 'border-slate-100'} shadow-sm hover:shadow-lg transition-all cursor-pointer ${isOverlapGroup ? 'ring-1 ring-amber-100' : ''}`}
+                            onClick={() => setActiveTask(isExpanded ? null : task.id)}
+                          >
+                            <div className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1.5">
                             {task.category && (
                               <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${cat.bg} ${cat.text}`}>
                                 {task.category}
+                              </span>
+                            )}
+                            {isOverlapGroup && (
+                              <span className="text-[9px] font-semibold text-amber-600 ml-auto">
+                                {formatTime12h(task.startTime)} - {formatTime12h(task.endTime)}
                               </span>
                             )}
                           </div>
@@ -378,11 +529,15 @@ export default function TodayPage() {
                         )}
                       </div>
                     )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })
+                </React.Fragment>
+              );
+            });
+          })()
         )}
       </div>
 
@@ -412,14 +567,25 @@ export default function TodayPage() {
                   placeholder="e.g., Morning Workout"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 mb-1 block">Time</label>
-                <input
-                  type="time"
-                  value={newTask.time}
-                  onChange={(e) => setNewTask({ ...newTask, time: e.target.value })}
-                  className="input-field"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-1 block">Start Time</label>
+                  <input
+                    type="time"
+                    value={newTask.startTime}
+                    onChange={(e) => setNewTask({ ...newTask, startTime: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-1 block">End Time</label>
+                  <input
+                    type="time"
+                    value={newTask.endTime}
+                    onChange={(e) => setNewTask({ ...newTask, endTime: e.target.value })}
+                    className="input-field"
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-700 mb-1 block">Category (optional)</label>
@@ -444,7 +610,7 @@ export default function TodayPage() {
                 <button
                   onClick={handleAddTask}
                   className="flex-1 btn-primary"
-                  disabled={!newTask.name || !newTask.time}
+                  disabled={!newTask.name || !newTask.startTime || !newTask.endTime}
                 >
                   Add Task
                 </button>
