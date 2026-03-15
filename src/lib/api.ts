@@ -81,11 +81,21 @@ export const tasksApi = {
   getByDate: (date: string) => api.get(`/api/tasks/${date}`),
   completeTask: (id: string, data: { isCompleted?: boolean; notes?: string; missedReason?: string }) =>
     api.patch(`/api/tasks/${id}/complete`, data),
-  updateTask: (id: string, data: { notes?: string; imageUrl?: string; aiData?: object }) =>
+  updateTask: (id: string, data: {
+    name?: string;
+    startTime?: string;
+    endTime?: string;
+    category?: string;
+    description?: string;
+    notes?: string;
+    imageUrl?: string;
+    aiData?: object;
+  }) =>
     api.patch(`/api/tasks/${id}`, data),
   createTask: (data: { name: string; date: string; startTime: string; endTime: string; category?: string }) =>
     api.post("/api/tasks", data),
   deleteTask: (id: string) => api.delete(`/api/tasks/${id}`),
+  deleteTasksByDate: (date: string) => api.delete(`/api/tasks/date/${date}`),
 };
 
 // AI API

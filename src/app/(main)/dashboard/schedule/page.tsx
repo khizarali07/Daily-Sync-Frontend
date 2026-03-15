@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { scheduleApi } from '@/lib/api';
+import { scheduleApi, tasksApi } from '@/lib/api';
+import { format, addDays, subDays, isToday } from 'date-fns';
 import {
   Upload, Plus, Trash2, Clock, Tag, CalendarDays,
-  FileText, AlertCircle, CheckCircle2, Loader2, X, Edit2, Trash
+  FileText, AlertCircle, CheckCircle2, Loader2, X, Edit2, Trash, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 interface TaskTemplate {
@@ -17,16 +18,33 @@ interface TaskTemplate {
   daysOfWeek: string[];
 }
 
+interface TaskInstance {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  category?: string;
+  description?: string;
+  isCompleted: boolean;
+}
+
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 export default function SchedulePage() {
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [dailyTasks, setDailyTasks] = useState<TaskInstance[]>([]);
+  const [taskDate, setTaskDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [taskLoading, setTaskLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
   const [error, setError] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [taskForm, setTaskForm] = useState({
+    name: '', startTime: '', endTime: '', category: '', description: '',
+  });
   const [newTemplate, setNewTemplate] = useState({
     name: '', startTime: '', endTime: '', category: '', description: '', daysOfWeek: [] as string[],
   });
@@ -34,6 +52,9 @@ export default function SchedulePage() {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { loadTemplates(); }, []);
+  useEffect(() => { loadDailyTasks(); }, [taskDate]);
+
+  const selectedTaskDate = format(taskDate, 'yyyy-MM-dd');
 
   const loadTemplates = async () => {
     try {
@@ -43,6 +64,21 @@ export default function SchedulePage() {
       console.error('Failed to load templates:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDailyTasks = async () => {
+    setTaskLoading(true);
+    try {
+      const response = isToday(taskDate)
+        ? await tasksApi.getToday()
+        : await tasksApi.getByDate(selectedTaskDate);
+      setDailyTasks(response.data.tasks || []);
+    } catch (err) {
+      console.error('Failed to load daily tasks:', err);
+      setError('Failed to load daily tasks');
+    } finally {
+      setTaskLoading(false);
     }
   };
 
@@ -149,6 +185,83 @@ export default function SchedulePage() {
         ? prev.daysOfWeek.filter(d => d !== day)
         : [...prev.daysOfWeek, day],
     }));
+  };
+
+  const handleEditTask = (task: TaskInstance) => {
+    setEditingTaskId(task.id);
+    setTaskForm({
+      name: task.name,
+      startTime: task.startTime,
+      endTime: task.endTime,
+      category: task.category || '',
+      description: task.description || '',
+    });
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTaskId || !taskForm.name || !taskForm.startTime || !taskForm.endTime) {
+      return;
+    }
+
+    try {
+      await tasksApi.updateTask(editingTaskId, {
+        name: taskForm.name,
+        startTime: taskForm.startTime,
+        endTime: taskForm.endTime,
+        category: taskForm.category || undefined,
+        description: taskForm.description || undefined,
+      });
+
+      setDailyTasks(prev => prev.map(task => (
+        task.id === editingTaskId
+          ? {
+              ...task,
+              name: taskForm.name,
+              startTime: taskForm.startTime,
+              endTime: taskForm.endTime,
+              category: taskForm.category || undefined,
+              description: taskForm.description || undefined,
+            }
+          : task
+      )));
+
+      setEditingTaskId(null);
+      setTaskForm({ name: '', startTime: '', endTime: '', category: '', description: '' });
+      setUploadMessage('Task updated successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update task');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Delete this task instance for this date?')) return;
+
+    try {
+      await tasksApi.deleteTask(taskId);
+      setDailyTasks(prev => prev.filter(task => task.id !== taskId));
+      if (editingTaskId === taskId) {
+        setEditingTaskId(null);
+      }
+      setUploadMessage('Task deleted successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete task');
+    }
+  };
+
+  const handleDeleteAllDailyTasks = async () => {
+    if (dailyTasks.length === 0) return;
+
+    const dateLabel = isToday(taskDate) ? 'today' : format(taskDate, 'MMMM d, yyyy');
+    if (!confirm(`Delete all ${dailyTasks.length} tasks for ${dateLabel}?`)) return;
+
+    try {
+      const response = await tasksApi.deleteTasksByDate(selectedTaskDate);
+      setDailyTasks([]);
+      setEditingTaskId(null);
+      setUploadMessage(response.data.message || 'All tasks deleted successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete all tasks for this date');
+    }
   };
 
   return (
@@ -334,6 +447,167 @@ export default function SchedulePage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Daily Task Instances */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+        <div className="px-6 py-4 border-b border-slate-100 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Daily Tasks
+              <span className="ml-2 text-sm font-normal text-slate-400">({dailyTasks.length})</span>
+            </h2>
+            <div className="flex items-center gap-2">
+              {dailyTasks.length > 0 && (
+                <button
+                  onClick={handleDeleteAllDailyTasks}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 size={14} />
+                  Delete All Tasks
+                </button>
+              )}
+              <button
+                onClick={loadDailyTasks}
+                className="text-xs font-semibold text-sky-600 hover:text-sky-700"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setTaskDate(subDays(taskDate, 1))}
+              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-slate-800">
+                {isToday(taskDate) ? 'Today' : format(taskDate, 'EEEE')}
+              </p>
+              <p className="text-xs text-slate-500">{format(taskDate, 'MMMM d, yyyy')}</p>
+            </div>
+
+            <button
+              onClick={() => setTaskDate(addDays(taskDate, 1))}
+              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {taskLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={28} className="animate-spin text-sky-500" />
+          </div>
+        ) : dailyTasks.length === 0 ? (
+          <div className="py-12 text-center">
+            <CalendarDays size={40} className="mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500 font-medium">No task instances for this date</p>
+            <p className="text-sm text-slate-400">Tasks will auto-generate from templates when available</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {dailyTasks.map((task) => (
+              <div key={task.id} className="p-4 sm:px-6">
+                {editingTaskId === task.id ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        value={taskForm.name}
+                        onChange={e => setTaskForm({ ...taskForm, name: e.target.value })}
+                        className="input-field"
+                        placeholder="Task name"
+                      />
+                      <input
+                        type="text"
+                        value={taskForm.category}
+                        onChange={e => setTaskForm({ ...taskForm, category: e.target.value })}
+                        className="input-field"
+                        placeholder="Category"
+                      />
+                      <input
+                        type="time"
+                        value={taskForm.startTime}
+                        onChange={e => setTaskForm({ ...taskForm, startTime: e.target.value })}
+                        className="input-field"
+                      />
+                      <input
+                        type="time"
+                        value={taskForm.endTime}
+                        onChange={e => setTaskForm({ ...taskForm, endTime: e.target.value })}
+                        className="input-field"
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={taskForm.description}
+                      onChange={e => setTaskForm({ ...taskForm, description: e.target.value })}
+                      className="input-field"
+                      placeholder="Description"
+                    />
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleUpdateTask}
+                        className="btn-primary py-2 px-4"
+                        disabled={!taskForm.name || !taskForm.startTime || !taskForm.endTime}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingTaskId(null)}
+                        className="px-4 py-2 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{task.name}</h3>
+                      <p className="text-sm text-slate-500 mt-1">{task.startTime} - {task.endTime}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {task.category && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-sky-50 text-sky-700">
+                            {task.category}
+                          </span>
+                        )}
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${task.isCompleted ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                          {task.isCompleted ? 'Completed' : 'Pending'}
+                        </span>
+                      </div>
+                      {task.description && (
+                        <p className="text-sm text-slate-500 mt-2">{task.description}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEditTask(task)}
+                        className="p-2 rounded-lg hover:bg-sky-50 text-slate-400 hover:text-sky-600 transition-colors"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Templates List */}
