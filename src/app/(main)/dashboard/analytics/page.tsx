@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { aiApi, tasksApi } from '@/lib/api';
+import { aiApi, tasksApi, healthApi, nutritionTargetsApi } from '@/lib/api';
 import { format, subDays, startOfWeek, addDays, getDay, subWeeks } from 'date-fns';
 import {
   BarChart3, Calendar, TrendingUp, Target, Loader2,
@@ -24,14 +24,24 @@ export default function AnalyticsPage() {
   const [bestDay, setBestDay] = useState('');
   const [totalCompleted, setTotalCompleted] = useState(0);
 
+  // Nutrition State
+  const [health, setHealth] = useState<any>(null);
+  const [targets, setTargets] = useState<any[]>([]);
+
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await aiApi.getConsistency();
-      const raw: HeatmapDay[] = res.data.stats || [];
+      const [aiRes, healthRes, targetsRes] = await Promise.all([
+        aiApi.getConsistency(),
+        healthApi.getToday().catch(() => ({ data: { data: null } })),
+        nutritionTargetsApi.getAll().catch(() => ({ data: { data: [] } }))
+      ]);
+      const raw: HeatmapDay[] = aiRes.data.stats || [];
       setHeatmapData(raw);
+      setHealth(healthRes.data.data);
+      setTargets(targetsRes.data.data);
 
       // Compute stats from heatmap data
       if (raw.length > 0) {
@@ -248,6 +258,99 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Nutrition Progress */}
+      {targets.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+              <Flame size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Today's Nutrition Progress</h2>
+              <p className="text-xs text-slate-500">How you're doing against your targets</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {['Calories', 'Protein', 'Carbs', 'Fats', 'Fiber', 'Water'].some(n => targets.find(t => t.nutrient === n)) && (
+              <div>
+                <h3 className="font-semibold text-slate-800 mb-3 border-b pb-2">Macros & Basics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {['Calories', 'Protein', 'Carbs', 'Fats', 'Fiber', 'Water'].map(n => {
+                    const t = targets.find(x => x.nutrient === n);
+                    if (!t) return null;
+                    const keyMap: any = {
+                      'Calories': 'caloriesConsumed', 'Protein': 'proteinGrams',
+                      'Carbs': 'carbsGrams', 'Fats': 'fatGrams', 'Fiber': 'fiberGrams', 'Water': 'waterIntake'
+                    };
+                    const val = health?.[keyMap[n]] || 0;
+                    const pct = Math.min(100, Math.round((val / (t.target || 1)) * 100));
+                    return (
+                      <div key={n}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="font-semibold text-slate-700">{n}</span>
+                          <span className="text-slate-500">{val} / {t.target} {t.unit}</span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full bg-amber-500 rounded-full`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h3 className="font-semibold text-slate-800 mb-3 border-b pb-2">Vitamins</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {targets.filter(t => t.nutrient.startsWith('Vitamin')).map(t => {
+                  const keyName = 'vit' + t.nutrient.replace('Vitamin ', '').replace(' ', '') + (t.unit === 'mcg' ? 'Mcg' : t.unit === 'mg' ? 'Mg' : 'Iu');
+                  const val = health?.[keyName] || health?.[keyName.replace('Iu', 'Iu')] || 0;
+                  const pct = Math.min(100, Math.round((val / (t.target || 1)) * 100));
+                  return (
+                    <div key={t.nutrient}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-semibold text-slate-700 truncate">{t.nutrient}</span>
+                        <span className="text-slate-500">{val} / {t.target} {t.unit}</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full bg-sky-500 rounded-full`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-slate-800 mb-3 border-b pb-2">Minerals & Others</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {targets.filter(t => !['Calories', 'Protein', 'Carbs', 'Fats', 'Fiber', 'Water'].includes(t.nutrient) && !t.nutrient.startsWith('Vitamin')).map(t => {
+                  let keyName = t.nutrient.toLowerCase().replace(/[^a-z0-9]/g, '') + (t.unit === 'mcg' ? 'Mcg' : t.unit === 'mg' ? 'Mg' : 'G');
+                  if (t.nutrient === 'EPA & DHA') keyName = 'epaDhaG';
+                  const val = health?.[keyName] || 0;
+                  const pct = Math.min(100, Math.round((val / (t.target || 1)) * 100));
+                  return (
+                    <div key={t.nutrient}>
+                      <div className="flex justify-between text-[10px] mb-1">
+                        <span className="font-semibold text-slate-700 truncate">{t.nutrient}</span>
+                        <span className="text-slate-500">{val} / {t.target} {t.unit}</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full bg-emerald-500 rounded-full`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

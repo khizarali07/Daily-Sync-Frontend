@@ -121,3 +121,20 @@ export const healthApi = {
   getWeeklyStats: () => api.get("/api/health/stats/weekly"),
   deleteByDate: (date: string) => api.delete(`/api/health/${date}`),
 };
+
+// Nutrition Targets API
+export const nutritionTargetsApi = {
+  getAll: () => api.get("/api/nutrition-targets"),
+  updateTarget: (data: { nutrient: string; min?: number | null; max?: number | null; target?: number | null; unit: string }) =>
+    api.put("/api/nutrition-targets", data),
+  bulkUpdate: (targets: Array<{ nutrient: string; min?: number | null; max?: number | null; target?: number | null; unit: string }>) =>
+    api.put("/api/nutrition-targets/bulk", { targets }),
+};
+
+// Meals API
+export const mealsApi = {
+  getByDate: (date: string) => api.get(`/api/meals?date=${date}`),
+  create: (data: any) => api.post("/api/meals", data),
+  update: (id: string, data: any) => api.put(`/api/meals/${id}`, data),
+  delete: (id: string) => api.delete(`/api/meals/${id}`),
+};

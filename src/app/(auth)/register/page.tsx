@@ -28,7 +28,7 @@ export default function RegisterPage() {
       // Don't set full auth yet, just store email for verification page if needed
       // Or setAuth but handle redirect to verify-email
       setAuth(response.data.user, response.data.token);
-      router.push("/verify-email");
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err: any) {
       setError(err.response?.data?.error || "Registration failed");
     } finally {

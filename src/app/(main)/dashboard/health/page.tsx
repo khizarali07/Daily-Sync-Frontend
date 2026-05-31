@@ -257,46 +257,10 @@ export default function HealthPage() {
               </div>
               <h2 className="text-lg font-semibold text-slate-900">Body</h2>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <label className="text-xs font-medium text-slate-600 mb-1 block">Weight (kg)</label>
                 <input type="number" step="0.1" value={form.weight} onChange={e => updateForm('weight', e.target.value)} className="input-field" placeholder="75.5" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Body Fat (%)</label>
-                <input type="number" step="0.1" value={form.bodyFat} onChange={e => updateForm('bodyFat', e.target.value)} className="input-field" placeholder="18.5" />
-              </div>
-            </div>
-          </div>
-
-          {/* Nutrition */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
-                <Flame size={20} className="text-orange-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-slate-900">Nutrition</h2>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Calories</label>
-                <input type="number" value={form.caloriesConsumed} onChange={e => updateForm('caloriesConsumed', e.target.value)} className="input-field" placeholder="2000" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Protein (g)</label>
-                <input type="number" value={form.proteinGrams} onChange={e => updateForm('proteinGrams', e.target.value)} className="input-field" placeholder="120" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Carbs (g)</label>
-                <input type="number" value={form.carbsGrams} onChange={e => updateForm('carbsGrams', e.target.value)} className="input-field" placeholder="250" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Fat (g)</label>
-                <input type="number" value={form.fatGrams} onChange={e => updateForm('fatGrams', e.target.value)} className="input-field" placeholder="65" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-600 mb-1 block">Water (L)</label>
-                <input type="number" step="0.1" value={form.waterIntake} onChange={e => updateForm('waterIntake', e.target.value)} className="input-field" placeholder="2.5" />
               </div>
             </div>
           </div>

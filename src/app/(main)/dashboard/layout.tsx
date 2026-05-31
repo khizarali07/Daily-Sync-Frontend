@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
+import AIProviderSwitcher from "@/components/AIProviderSwitcher";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -18,6 +19,7 @@ import {
   X,
   ChevronRight,
   User,
+  Target,
 } from "lucide-react";
 
 const navItems = [
@@ -31,6 +33,7 @@ const navItems = [
 ];
 
 const settingsItems = [
+  { href: "/dashboard/nutrition-targets", label: "Nutrition Targets", icon: Target },
   { href: "/dashboard/change-password", label: "Change Password", icon: Settings },
 ];
 
@@ -198,6 +201,7 @@ export default function DashboardLayout({
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <AIProviderSwitcher />
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
                 <span className="text-xs font-medium text-slate-600">Online</span>

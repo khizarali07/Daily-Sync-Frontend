@@ -8,7 +8,7 @@ import { authApi } from "@/lib/api";
 function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const [email, setEmail] = useState(searchParams.get("email") || "");
 
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
@@ -84,9 +84,8 @@ function VerifyEmailContent() {
             Verify Your Email
           </h2>
           <p className="mt-2 text-lg text-slate-600">
-            We've sent a 6-digit OTP to
+            Enter your email and the 6-digit OTP sent to you
           </p>
-          <p className="text-sky-600 font-semibold mt-1">{email}</p>
         </div>
 
         <div className="card animate-scale-in">
@@ -128,6 +127,18 @@ function VerifyEmailContent() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field mb-4"
+                placeholder="you@example.com"
+              />
+              
               <label className="block text-sm font-semibold text-slate-700 mb-3 text-center">
                 Enter 6-Digit OTP
               </label>
