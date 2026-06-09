@@ -23,7 +23,7 @@ export default function AIAnalysisPage() {
 
   const [manualFood, setManualFood] = useState<Record<string, string>>({
     mealType: 'Breakfast', name: '',
-    calories: '', protein: '', carbs: '', fat: '', fiber: '', water: '',
+    calories: '', protein: '', carbs: '', fat: '', fiber: '',
     vitA: '', vitC: '', vitD: '', vitE: '', vitK: '',
     vitB1: '', vitB2: '', vitB3: '', vitB6: '', vitB7: '', vitB9: '', vitB12: '',
     calcium: '', magnesium: '', potassium: '', sodium: '', iron: '', zinc: '',
@@ -91,7 +91,6 @@ export default function AIAnalysisPage() {
           carbs: Number(manualFood.carbs) || 0,
           fat: Number(manualFood.fat) || 0,
           fiber: Number(manualFood.fiber) || 0,
-          water: Number(manualFood.water) || 0,
         },
         vitamins: {
           vitAMcg: Number(manualFood.vitA) || 0,
@@ -168,7 +167,6 @@ export default function AIAnalysisPage() {
           carbsGrams: result.macros?.carbs || 0,
           fatGrams: result.macros?.fat || 0,
           fiberGrams: result.macros?.fiber || 0,
-          waterIntake: result.macros?.water || 0,
           ...result.vitamins,
           ...result.minerals,
           ...result.others
@@ -357,7 +355,6 @@ export default function AIAnalysisPage() {
                       { key: 'carbs', label: 'Carbs (g)' },
                       { key: 'fat', label: 'Fat (g)' },
                       { key: 'fiber', label: 'Fiber (g)' },
-                      { key: 'water', label: 'Water (L)' },
                     ].map(f => (
                       <div key={f.key}>
                         <label className="text-[10px] font-semibold text-slate-500 block truncate">{f.label}</label>

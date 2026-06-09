@@ -265,6 +265,49 @@ export default function HealthPage() {
             </div>
           </div>
 
+          {/* Hydration */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center">
+                <Droplets size={20} className="text-sky-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900">Hydration</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="text-xs font-medium text-slate-600 mb-2 block">Water Intake (Liters)</label>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      const current = parseFloat(form.waterIntake) || 0;
+                      updateForm('waterIntake', Math.max(0, current - 0.25).toString());
+                    }}
+                    className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors"
+                  >
+                    - 0.25L
+                  </button>
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={form.waterIntake} 
+                    onChange={e => updateForm('waterIntake', e.target.value)} 
+                    className="input-field flex-1 text-center font-semibold text-lg" 
+                    placeholder="0.0" 
+                  />
+                  <button 
+                    onClick={() => {
+                      const current = parseFloat(form.waterIntake) || 0;
+                      updateForm('waterIntake', (current + 0.25).toString());
+                    }}
+                    className="p-3 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-700 transition-colors font-semibold"
+                  >
+                    + 0.25L
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Mood & Energy */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center gap-3 mb-4">
