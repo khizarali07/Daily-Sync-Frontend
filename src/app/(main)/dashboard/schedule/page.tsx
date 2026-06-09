@@ -59,7 +59,11 @@ export default function SchedulePage() {
   const loadTemplates = async () => {
     try {
       const res = await scheduleApi.getTemplates();
-      setTemplates(res.data.templates);
+      const parsedTemplates = res.data.templates.map((t: any) => ({
+        ...t,
+        daysOfWeek: t.daysOfWeek ? t.daysOfWeek.split(',') : []
+      }));
+      setTemplates(parsedTemplates);
     } catch (err) {
       console.error('Failed to load templates:', err);
     } finally {
