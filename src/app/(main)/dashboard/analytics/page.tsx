@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
       ]);
       const raw: HeatmapDay[] = aiRes.data.stats || [];
       setHeatmapData(raw);
-      setHealth(healthRes.data.data);
+      setHealth(healthRes.data.metrics);
       setTargets(targetsRes.data.data);
 
       // Compute stats from heatmap data
