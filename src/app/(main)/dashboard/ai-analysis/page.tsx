@@ -516,7 +516,7 @@ export default function AIAnalysisPage() {
               <div className="space-y-3">
                 {editableFoodItems.map((item: any, i: number) => (
                   <div key={i} className="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
-                    <div className="flex items-center gap-2 p-2 bg-slate-50/50">
+                    <div className="flex items-center gap-1 sm:gap-2 p-2 bg-slate-50/50">
                       <input
                         type="text"
                         value={item.name}
@@ -525,7 +525,7 @@ export default function AIAnalysisPage() {
                           newItems[i].name = e.target.value;
                           setEditableFoodItems(newItems);
                         }}
-                        className="flex-1 bg-transparent px-2 py-1 text-sm font-medium text-slate-800 outline-none border border-transparent focus:border-amber-300 focus:bg-white rounded"
+                        className="flex-1 min-w-0 bg-transparent px-1 sm:px-2 py-1 text-sm font-medium text-slate-800 outline-none border border-transparent focus:border-amber-300 focus:bg-white rounded"
                         placeholder="Food name"
                       />
                       <input
@@ -536,12 +536,12 @@ export default function AIAnalysisPage() {
                           newItems[i].quantity = e.target.value;
                           setEditableFoodItems(newItems);
                         }}
-                        className="w-24 bg-transparent px-2 py-1 text-sm text-slate-600 outline-none border border-transparent focus:border-amber-300 focus:bg-white rounded text-right"
+                        className="w-16 sm:w-24 flex-shrink-0 bg-transparent px-1 sm:px-2 py-1 text-sm text-slate-600 outline-none border border-transparent focus:border-amber-300 focus:bg-white rounded text-right"
                         placeholder="Quantity"
                       />
                       <button
                         onClick={() => setExpandedItem(expandedItem === i ? null : i)}
-                        className="p-1 hover:bg-slate-200 rounded text-slate-500"
+                        className="p-1 flex-shrink-0 hover:bg-slate-200 rounded text-slate-500"
                       >
                         {expandedItem === i ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                       </button>
