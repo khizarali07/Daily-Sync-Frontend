@@ -21,7 +21,7 @@ export default function HealthPage() {
     steps: '', caloriesBurned: '', activeMinutes: '', distance: '',
     weight: '', bodyFat: '',
     caloriesConsumed: '', proteinGrams: '', carbsGrams: '', fatGrams: '', waterIntake: '',
-    moodScore: '', energyLevel: '', stressLevel: '', workoutId: '',
+    moodScore: '', energyLevel: '', stressLevel: '', workoutIds: [] as string[],
   });
 
   const [workouts, setWorkouts] = useState<any[]>([]);
@@ -68,7 +68,7 @@ export default function HealthPage() {
           moodScore: data.moodScore?.toString() || '',
           energyLevel: data.energyLevel?.toString() || '',
           stressLevel: data.stressLevel?.toString() || '',
-          workoutId: data.workoutId || '',
+          workoutIds: data.workouts?.map((w: any) => w.id) || [],
         });
       } else {
         setForm({
@@ -77,7 +77,7 @@ export default function HealthPage() {
           steps: '', caloriesBurned: '', activeMinutes: '', distance: '',
           weight: '', bodyFat: '',
           caloriesConsumed: '', proteinGrams: '', carbsGrams: '', fatGrams: '', waterIntake: '',
-          moodScore: '', energyLevel: '', stressLevel: '', workoutId: '',
+          moodScore: '', energyLevel: '', stressLevel: '', workoutIds: [],
         });
       }
     } catch (err) {
@@ -92,16 +92,28 @@ export default function HealthPage() {
     try {
       const payload: Record<string, any> = { date, source: 'manual' };
       Object.entries(form).forEach(([key, val]) => {
-        if (val !== '' && val !== undefined) {
-          if (['sleepQuality', 'bedtime', 'wakeTime', 'workoutId'].includes(key)) {
+        if (key === 'workoutIds') {
+          // Send one by one or let backend handle? Actually if we are saving, we should send individual requests to connect if there are multiple, or modify the API. 
+          // Wait, earlier I modified backend so that `healthApi.upsert({ workoutId: "..." })` just connects ONE workout at a time.
+        } else if (val !== '' && val !== undefined) {
+          if (['sleepQuality', 'bedtime', 'wakeTime'].includes(key)) {
             payload[key] = val;
           } else {
-            const num = parseFloat(val);
+            const num = parseFloat(val as string);
             if (!isNaN(num)) payload[key] = num;
           }
         }
       });
+      // Handle the first save to update/create
       await healthApi.upsert(payload);
+      
+      // Handle connecting multiple workouts
+      if (form.workoutIds && form.workoutIds.length > 0) {
+        for (const wid of form.workoutIds) {
+          await healthApi.upsert({ date, workoutId: wid, source: 'manual' });
+        }
+      }
+
       setMessage('Health data saved successfully!');
       setTimeout(() => setMessage(''), 3000);
     } catch (err: any) {
@@ -265,18 +277,31 @@ export default function HealthPage() {
             
             <div className="mt-4 pt-4 border-t border-slate-100">
               <label className="text-xs font-medium text-slate-600 mb-2 block flex items-center gap-1">
-                <Dumbbell size={14} /> Linked Workout
+                <Dumbbell size={14} /> Linked Workouts
               </label>
-              <select 
-                value={form.workoutId} 
-                onChange={e => updateForm('workoutId', e.target.value)} 
-                className="input-field w-full"
-              >
-                <option value="">No workout selected</option>
-                {workouts.map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-2">
+                {workouts.map(w => {
+                  const isLinked = form.workoutIds.includes(w.id);
+                  return (
+                    <button 
+                      key={w.id}
+                      onClick={() => {
+                        const newIds = isLinked 
+                          ? form.workoutIds.filter(id => id !== w.id)
+                          : [...form.workoutIds, w.id];
+                        setForm(prev => ({ ...prev, workoutIds: newIds }));
+                      }}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                        isLinked 
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {w.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
