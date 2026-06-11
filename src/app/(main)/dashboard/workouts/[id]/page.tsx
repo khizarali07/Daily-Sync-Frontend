@@ -58,7 +58,7 @@ export default function WorkoutDetailPage() {
 
       const res = await workoutsApi.update(id, {
         name,
-        estimatedCalories: estimatedCalories ? Number(estimatedCalories) : null,
+        estimatedCalories: estimatedCalories ? Number(estimatedCalories) : undefined,
         exercises: parsedExercises
       });
       
