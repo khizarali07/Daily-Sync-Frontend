@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Cpu, Sparkles } from "lucide-react";
-import axios from "axios";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { api } from "@/lib/api";
 
 interface ProviderStatus {
   current: "local-gguf" | "gemini";
@@ -25,7 +23,7 @@ export default function AIProviderSwitcher() {
 
   const fetchStatus = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/ai-provider/status`);
+      const response = await api.get(`/api/ai-provider/status`);
       setStatus(response.data.data);
     } catch (error) {
       console.error("Failed to fetch AI provider status:", error);
@@ -43,7 +41,7 @@ export default function AIProviderSwitcher() {
     setLoading(true);
     setShowDropdown(false);
     try {
-      const response = await axios.post(`${API_URL}/api/ai-provider/switch`, {
+      const response = await api.post(`/api/ai-provider/switch`, {
         provider,
       });
       setStatus(response.data.data);
@@ -55,11 +53,7 @@ export default function AIProviderSwitcher() {
     }
   };
 
-  if (!status) {
-    return null;
-  }
-
-  const currentProvider = status.current;
+  const currentProvider = status?.current || "gemini";
   const isLMStudio = currentProvider === "local-gguf";
 
   return (
@@ -80,8 +74,8 @@ export default function AIProviderSwitcher() {
         {!loading && (
           <div
             className={`w-2 h-2 rounded-full ${
-              (isLMStudio && status.lmstudio.available) ||
-              (!isLMStudio && status.gemini.available)
+              status && ((isLMStudio && status.lmstudio.available) ||
+              (!isLMStudio && status.gemini.available))
                 ? "bg-emerald-400"
                 : "bg-amber-400"
             }`}
@@ -107,7 +101,7 @@ export default function AIProviderSwitcher() {
             <div className="p-2 space-y-1">
               <button
                 onClick={() => switchProvider("local-gguf")}
-                disabled={!status.lmstudio.available || loading}
+                disabled={!status || !status.lmstudio.available || loading}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                   currentProvider === "local-gguf"
                     ? "bg-purple-50 border border-purple-200"
@@ -127,9 +121,9 @@ export default function AIProviderSwitcher() {
                     Local GGUF Model
                   </p>
                   <p className="text-xs text-slate-500">
-                    {status.lmstudio.available
+                    {!status ? "Checking..." : status.lmstudio.available
                       ? "Ready"
-                      : " Not available"}
+                      : "Not available"}
                   </p>
                 </div>
                 {currentProvider === "local-gguf" && (
@@ -140,7 +134,7 @@ export default function AIProviderSwitcher() {
               {/* Gemini Option */}
               <button
                 onClick={() => switchProvider("gemini")}
-                disabled={!status.gemini.configured || loading}
+                disabled={!status || !status.gemini.configured || loading}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                   currentProvider === "gemini"
                     ? "bg-sky-50 border border-sky-200"
@@ -160,7 +154,7 @@ export default function AIProviderSwitcher() {
                     Google Gemini
                   </p>
                   <p className="text-xs text-slate-500">
-                    {status.gemini.configured
+                    {!status ? "Checking..." : status.gemini.configured
                       ? "Ready"
                       : "API key not configured"}
                   </p>
