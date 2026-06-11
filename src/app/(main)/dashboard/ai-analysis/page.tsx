@@ -40,11 +40,38 @@ export default function AIAnalysisPage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setImage(base64);
-      setPreview(base64);
-      setResult(null);
-      setError('');
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height *= MAX_DIM / width;
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width *= MAX_DIM / height;
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const resizedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          setImage(resizedBase64);
+          setPreview(resizedBase64);
+          setResult(null);
+          setError('');
+        }
+      };
+      img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
   };
