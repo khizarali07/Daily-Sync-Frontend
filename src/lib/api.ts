@@ -101,6 +101,7 @@ export const tasksApi = {
 // AI API
 export const aiApi = {
   analyzeFood: (image: string) => api.post("/api/ai/analyze-food", { image }),
+  recalculateFood: (foodItems: any[]) => api.post("/api/ai/recalculate-food", { foodItems }),
   analyzeWorkout: (image: string) => api.post("/api/ai/analyze-workout", { image }),
   analyzeGeneral: (image: string, prompt?: string) =>
     api.post("/api/ai/analyze-general", { image, prompt }),
@@ -137,4 +138,13 @@ export const mealsApi = {
   create: (data: any) => api.post("/api/meals", data),
   update: (id: string, data: any) => api.put(`/api/meals/${id}`, data),
   delete: (id: string) => api.delete(`/api/meals/${id}`),
+};
+
+// Workouts API
+export const workoutsApi = {
+  getAll: () => api.get("/api/workouts"),
+  getById: (id: string) => api.get(`/api/workouts/${id}`),
+  create: (data: { name: string; exercises: any[]; estimatedCalories?: number }) => api.post("/api/workouts", data),
+  update: (id: string, data: { name?: string; exercises?: any[]; estimatedCalories?: number }) => api.put(`/api/workouts/${id}`, data),
+  delete: (id: string) => api.delete(`/api/workouts/${id}`),
 };

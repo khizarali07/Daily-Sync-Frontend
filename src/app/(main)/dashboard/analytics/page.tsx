@@ -5,7 +5,7 @@ import { aiApi, tasksApi, healthApi, nutritionTargetsApi } from '@/lib/api';
 import { format, subDays, startOfWeek, addDays, getDay, subWeeks } from 'date-fns';
 import {
   BarChart3, Calendar, TrendingUp, Target, Loader2,
-  Flame, Award, ArrowUp, ArrowDown, Minus
+  Flame, Award, ArrowUp, ArrowDown, Minus, Dumbbell
 } from 'lucide-react';
 
 interface HeatmapDay {
@@ -258,6 +258,30 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Today's Workout */}
+      {health?.workout && (
+        <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl shadow-violet-500/20">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Dumbbell size={20} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Today's Workout</h2>
+              <p className="text-xs text-white/80">Linked from Health Tracker</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="text-2xl font-bold">{health.workout.name}</p>
+            {health.workout.exercises && health.workout.exercises.length > 0 && (
+              <p className="text-sm mt-1 opacity-90">{health.workout.exercises.length} exercises completed</p>
+            )}
+            {health.workout.estimatedCalories && (
+              <p className="text-sm mt-1 opacity-90">{health.workout.estimatedCalories} kcal burned</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Nutrition Progress */}
       {targets.length > 0 && (

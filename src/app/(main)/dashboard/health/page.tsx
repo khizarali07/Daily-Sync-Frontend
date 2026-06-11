@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { healthApi } from '@/lib/api';
+import { healthApi, workoutsApi } from '@/lib/api';
 import { format } from 'date-fns';
 import {
   Moon, Heart, Footprints, Flame, Droplets, Brain,
   Zap, Activity, Scale, Save, Loader2, CheckCircle2,
-  AlertCircle, ChevronLeft, ChevronRight
+  AlertCircle, ChevronLeft, ChevronRight, Dumbbell
 } from 'lucide-react';
 
 export default function HealthPage() {
@@ -21,10 +21,24 @@ export default function HealthPage() {
     steps: '', caloriesBurned: '', activeMinutes: '', distance: '',
     weight: '', bodyFat: '',
     caloriesConsumed: '', proteinGrams: '', carbsGrams: '', fatGrams: '', waterIntake: '',
-    moodScore: '', energyLevel: '', stressLevel: '',
+    moodScore: '', energyLevel: '', stressLevel: '', workoutId: '',
   });
 
-  useEffect(() => { loadHealth(); }, [date]);
+  const [workouts, setWorkouts] = useState<any[]>([]);
+
+  useEffect(() => { 
+    loadHealth(); 
+    loadWorkouts();
+  }, [date]);
+
+  const loadWorkouts = async () => {
+    try {
+      const res = await workoutsApi.getAll();
+      setWorkouts(res.data.data);
+    } catch (err) {
+      console.error('Failed to load workouts:', err);
+    }
+  };
 
   const loadHealth = async () => {
     setLoading(true);
@@ -54,6 +68,7 @@ export default function HealthPage() {
           moodScore: data.moodScore?.toString() || '',
           energyLevel: data.energyLevel?.toString() || '',
           stressLevel: data.stressLevel?.toString() || '',
+          workoutId: data.workoutId || '',
         });
       } else {
         setForm({
@@ -62,7 +77,7 @@ export default function HealthPage() {
           steps: '', caloriesBurned: '', activeMinutes: '', distance: '',
           weight: '', bodyFat: '',
           caloriesConsumed: '', proteinGrams: '', carbsGrams: '', fatGrams: '', waterIntake: '',
-          moodScore: '', energyLevel: '', stressLevel: '',
+          moodScore: '', energyLevel: '', stressLevel: '', workoutId: '',
         });
       }
     } catch (err) {
@@ -78,7 +93,7 @@ export default function HealthPage() {
       const payload: Record<string, any> = { date, source: 'manual' };
       Object.entries(form).forEach(([key, val]) => {
         if (val !== '' && val !== undefined) {
-          if (['sleepQuality', 'bedtime', 'wakeTime'].includes(key)) {
+          if (['sleepQuality', 'bedtime', 'wakeTime', 'workoutId'].includes(key)) {
             payload[key] = val;
           } else {
             const num = parseFloat(val);
@@ -246,6 +261,22 @@ export default function HealthPage() {
                 <label className="text-xs font-medium text-slate-600 mb-1 block">Distance (km)</label>
                 <input type="number" step="0.1" value={form.distance} onChange={e => updateForm('distance', e.target.value)} className="input-field" placeholder="5.2" />
               </div>
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <label className="text-xs font-medium text-slate-600 mb-2 block flex items-center gap-1">
+                <Dumbbell size={14} /> Linked Workout
+              </label>
+              <select 
+                value={form.workoutId} 
+                onChange={e => updateForm('workoutId', e.target.value)} 
+                className="input-field w-full"
+              >
+                <option value="">No workout selected</option>
+                {workouts.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
             </div>
           </div>
 

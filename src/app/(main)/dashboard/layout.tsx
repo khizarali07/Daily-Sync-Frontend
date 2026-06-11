@@ -20,6 +20,7 @@ import {
   ChevronRight,
   User,
   Target,
+  Dumbbell,
 } from "lucide-react";
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/dashboard/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/dashboard/ai-analysis", label: "AI Analysis", icon: Camera },
   { href: "/dashboard/health", label: "Health", icon: Heart },
+  { href: "/dashboard/workouts", label: "Workouts", icon: Dumbbell },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/journal", label: "Journal", icon: BookOpen },
 ];
