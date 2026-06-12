@@ -11,6 +11,73 @@ interface FoodItem {
   quantity: string;
 }
 
+const FDA_DAILY_VALUES: Record<string, number> = {
+  totalCalories: 2000,
+  protein: 50,
+  carbs: 275,
+  fat: 78,
+  fiber: 28,
+  
+  vitAMcg: 900,
+  vitCMg: 90,
+  vitDIu: 800,
+  vitEMg: 15,
+  vitKMcg: 120,
+  vitB1Mg: 1.2,
+  vitB2Mg: 1.3,
+  vitB3Mg: 16,
+  vitB6Mg: 1.7,
+  vitB7Mcg: 30,
+  vitB9Mcg: 400,
+  vitB12Mcg: 2.4,
+  
+  calciumMg: 1300,
+  magnesiumMg: 420,
+  potassiumMg: 4700,
+  sodiumMg: 2300,
+  ironMg: 18,
+  zincMg: 11,
+  iodineMcg: 150,
+  seleniumMcg: 55,
+  copperMg: 0.9,
+  phosphorusMg: 1250,
+  chlorideMg: 2300,
+  manganeseMg: 2.3,
+  fluorideMg: 4,
+  chromiumMcg: 35,
+  molybdenumMcg: 45,
+  
+  omega3G: 1.6,
+  omega6G: 17,
+  cholineMg: 550,
+};
+
+function TargetProgress({ label, value, targetKey }: { label: string, value: number, targetKey: string }) {
+  const target = FDA_DAILY_VALUES[targetKey];
+  if (!target) return null;
+  
+  const rawPercentage = (value / target) * 100;
+  const percentage = Math.round(rawPercentage);
+  const widthPercentage = Math.min(percentage, 100);
+  
+  let barColor = "bg-teal-500";
+  if (percentage >= 100) barColor = "bg-emerald-500";
+  else if (percentage < 20) barColor = "bg-rose-400";
+  else if (percentage < 50) barColor = "bg-amber-400";
+  
+  return (
+    <div className="mb-3">
+      <div className="flex justify-between items-end mb-1">
+        <span className="text-xs font-semibold text-slate-700">{label}</span>
+        <span className="text-xs font-bold text-slate-900">{percentage}%</span>
+      </div>
+      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+        <div className={`h-full ${barColor} rounded-full transition-all duration-1000`} style={{ width: `${widthPercentage}%` }}></div>
+      </div>
+    </div>
+  );
+}
+
 export default function FoodCalculatorPage() {
   const [items, setItems] = useState<FoodItem[]>([]);
   const [currentName, setCurrentName] = useState('');
@@ -247,6 +314,38 @@ export default function FoodCalculatorPage() {
                       );
                     })}
                   </div>
+                </div>
+              </div>
+
+              {/* Daily Targets Completion */}
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8 mt-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center">
+                    <Flame size={20} className="text-teal-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-lg">Daily Targets Completion</h3>
+                    <p className="text-sm text-slate-500">Based on standard FDA 2000-calorie diet guidelines</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+                  <TargetProgress label="Calories" value={result.totalCalories || 0} targetKey="totalCalories" />
+                  <TargetProgress label="Protein" value={result.macros?.protein || 0} targetKey="protein" />
+                  <TargetProgress label="Carbs" value={result.macros?.carbs || 0} targetKey="carbs" />
+                  <TargetProgress label="Fat" value={result.macros?.fat || 0} targetKey="fat" />
+                  <TargetProgress label="Fiber" value={result.macros?.fiber || 0} targetKey="fiber" />
+                  
+                  {result.vitamins && Object.entries(result.vitamins).map(([key, value]) => {
+                    const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/mcg|mg|iu/gi, '').trim();
+                    return <TargetProgress key={key} label={label} value={Number(value) || 0} targetKey={key} />
+                  })}
+                  
+                  {result.minerals && Object.entries({...result.minerals, ...result.others}).map(([key, value]) => {
+                    const label = key.replace(/([A-Z])/g, ' $1').replace(/mcg|mg|g/gi, '').trim();
+                    const labelCapitalized = label.charAt(0).toUpperCase() + label.slice(1);
+                    return <TargetProgress key={key} label={labelCapitalized} value={Number(value) || 0} targetKey={key} />
+                  })}
                 </div>
               </div>
             </div>
