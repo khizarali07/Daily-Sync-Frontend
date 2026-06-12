@@ -43,7 +43,7 @@ export default function FoodCalculatorPage() {
         items,
         "Calculated from manual food calculator"
       );
-      setResult(res.data);
+      setResult(res.data.data);
     } catch (err: any) {
       console.error(err);
       setError(err?.response?.data?.error || "Failed to calculate nutrients");
