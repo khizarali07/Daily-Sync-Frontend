@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { aiApi } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { aiApi, nutritionTargetsApi } from '@/lib/api';
 import {
   Calculator, Plus, Trash2, Beef, Wheat, Droplets, Flame, Loader2, X
 } from 'lucide-react';
@@ -52,8 +52,52 @@ const FDA_DAILY_VALUES: Record<string, number> = {
   cholineMg: 550,
 };
 
-function TargetProgress({ label, value, targetKey }: { label: string, value: number, targetKey: string }) {
-  const target = FDA_DAILY_VALUES[targetKey];
+const TARGET_KEY_MAP: Record<string, string> = {
+  totalCalories: "Calories",
+  protein: "Protein",
+  carbs: "Carbs",
+  fat: "Fats",
+  fiber: "Fiber",
+  vitAMcg: "Vit A",
+  vitCMg: "Vit C",
+  vitDIu: "Vit D",
+  vitEMg: "Vit E",
+  vitKMcg: "Vit K",
+  vitB1Mg: "Vit B1",
+  vitB2Mg: "Vit B2",
+  vitB3Mg: "Vit B3",
+  vitB6Mg: "Vit B6",
+  vitB7Mcg: "Vit B7",
+  vitB9Mcg: "Vit B9",
+  vitB12Mcg: "Vit B12",
+  calciumMg: "Calcium",
+  magnesiumMg: "Magnesium",
+  potassiumMg: "Potassium",
+  sodiumMg: "Sodium",
+  ironMg: "Iron",
+  zincMg: "Zinc",
+  iodineMcg: "Iodine",
+  seleniumMcg: "Selenium",
+  copperMg: "Copper",
+  phosphorusMg: "Phosphorus",
+  manganeseMg: "Manganese",
+  fluorideMg: "Fluoride",
+  chromiumMcg: "Chromium",
+  molybdenumMcg: "Molybdenum",
+  chlorideMg: "Chloride",
+  omega3G: "Omega-3",
+  omega6G: "Omega-6",
+  cholineMg: "Choline"
+};
+
+function TargetProgress({ label, value, targetKey, customTargets, useCustomTargets }: { label: string, value: number, targetKey: string, customTargets: Record<string, number> | null, useCustomTargets: boolean }) {
+  const nutrientName = TARGET_KEY_MAP[targetKey];
+  let target = FDA_DAILY_VALUES[targetKey];
+  
+  if (useCustomTargets && customTargets && nutrientName && customTargets[nutrientName]) {
+    target = customTargets[nutrientName];
+  }
+  
   if (!target) return null;
   
   const rawPercentage = (value / target) * 100;
@@ -86,6 +130,21 @@ export default function FoodCalculatorPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [customTargets, setCustomTargets] = useState<Record<string, number> | null>(null);
+  const [useCustomTargets, setUseCustomTargets] = useState(false);
+
+  useEffect(() => {
+    nutritionTargetsApi.getAll().then(res => {
+      const targetMap: Record<string, number> = {};
+      res.data.data.forEach((t: any) => {
+        if (t.target !== null) {
+          targetMap[t.nutrient] = t.target;
+        }
+      });
+      setCustomTargets(Object.keys(targetMap).length > 0 ? targetMap : null);
+    }).catch(err => console.error("Failed to fetch targets", err));
+  }, []);
 
   const handleAddItem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,7 +325,7 @@ export default function FoodCalculatorPage() {
                       <div className={`w-10 h-10 ${macro.bg} rounded-xl flex items-center justify-center mb-3`}>
                         <Icon size={20} className={macro.color} />
                       </div>
-                      <p className="text-2xl font-bold text-slate-900">{macro.value || 0}<span className="text-sm font-semibold text-slate-500 ml-1">g</span></p>
+                      <p className="text-2xl font-bold text-slate-900">{parseFloat(Number(macro.value || 0).toFixed(3))}<span className="text-sm font-semibold text-slate-500 ml-1">g</span></p>
                       <p className="text-sm font-medium text-slate-600 mt-1">{macro.label}</p>
                     </div>
                   );
@@ -288,7 +347,7 @@ export default function FoodCalculatorPage() {
                       return (
                         <div key={key} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded-lg transition-colors">
                           <span className="text-sm text-slate-600 font-medium">{label}</span>
-                          <span className="text-sm font-bold text-slate-900">{Number(value) || 0}<span className="text-xs font-semibold text-slate-500 ml-1">{unit}</span></span>
+                          <span className="text-sm font-bold text-slate-900">{parseFloat(Number(value || 0).toFixed(3))}<span className="text-xs font-semibold text-slate-500 ml-1">{unit}</span></span>
                         </div>
                       );
                     })}
@@ -309,7 +368,7 @@ export default function FoodCalculatorPage() {
                       return (
                         <div key={key} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded-lg transition-colors">
                           <span className="text-sm text-slate-600 font-medium">{labelCapitalized}</span>
-                          <span className="text-sm font-bold text-slate-900">{Number(value) || 0}<span className="text-xs font-semibold text-slate-500 ml-1">{unit}</span></span>
+                          <span className="text-sm font-bold text-slate-900">{parseFloat(Number(value || 0).toFixed(3))}<span className="text-xs font-semibold text-slate-500 ml-1">{unit}</span></span>
                         </div>
                       );
                     })}
@@ -319,32 +378,48 @@ export default function FoodCalculatorPage() {
 
               {/* Daily Targets Completion */}
               <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 sm:p-8 mt-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center">
-                    <Flame size={20} className="text-teal-600" />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center">
+                      <Flame size={20} className="text-teal-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-lg">Daily Targets Completion</h3>
+                      <p className="text-sm text-slate-500">
+                        {useCustomTargets ? "Based on your personal manual targets" : "Based on standard FDA 2000-calorie diet guidelines"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-lg">Daily Targets Completion</h3>
-                    <p className="text-sm text-slate-500">Based on standard FDA 2000-calorie diet guidelines</p>
-                  </div>
+                  
+                  {customTargets && (
+                    <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                      <span className="text-sm font-semibold text-slate-700">Use Custom Targets</span>
+                      <button 
+                        onClick={() => setUseCustomTargets(!useCustomTargets)}
+                        className={`w-11 h-6 rounded-full transition-colors relative ${useCustomTargets ? 'bg-teal-500' : 'bg-slate-300'}`}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all ${useCustomTargets ? 'left-6' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-                  <TargetProgress label="Calories" value={result.totalCalories || 0} targetKey="totalCalories" />
-                  <TargetProgress label="Protein" value={result.macros?.protein || 0} targetKey="protein" />
-                  <TargetProgress label="Carbs" value={result.macros?.carbs || 0} targetKey="carbs" />
-                  <TargetProgress label="Fat" value={result.macros?.fat || 0} targetKey="fat" />
-                  <TargetProgress label="Fiber" value={result.macros?.fiber || 0} targetKey="fiber" />
+                  <TargetProgress label="Calories" value={result.totalCalories || 0} targetKey="totalCalories" customTargets={customTargets} useCustomTargets={useCustomTargets} />
+                  <TargetProgress label="Protein" value={result.macros?.protein || 0} targetKey="protein" customTargets={customTargets} useCustomTargets={useCustomTargets} />
+                  <TargetProgress label="Carbs" value={result.macros?.carbs || 0} targetKey="carbs" customTargets={customTargets} useCustomTargets={useCustomTargets} />
+                  <TargetProgress label="Fat" value={result.macros?.fat || 0} targetKey="fat" customTargets={customTargets} useCustomTargets={useCustomTargets} />
+                  <TargetProgress label="Fiber" value={result.macros?.fiber || 0} targetKey="fiber" customTargets={customTargets} useCustomTargets={useCustomTargets} />
                   
                   {result.vitamins && Object.entries(result.vitamins).map(([key, value]) => {
                     const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|iu)$/i, '').trim();
-                    return <TargetProgress key={key} label={label} value={Number(value) || 0} targetKey={key} />
+                    return <TargetProgress key={key} label={label} value={Number(value) || 0} targetKey={key} customTargets={customTargets} useCustomTargets={useCustomTargets} />
                   })}
                   
                   {result.minerals && Object.entries({...result.minerals, ...result.others}).map(([key, value]) => {
                     const label = key.replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|g)$/i, '').trim();
                     const labelCapitalized = label.charAt(0).toUpperCase() + label.slice(1);
-                    return <TargetProgress key={key} label={labelCapitalized} value={Number(value) || 0} targetKey={key} />
+                    return <TargetProgress key={key} label={labelCapitalized} value={Number(value) || 0} targetKey={key} customTargets={customTargets} useCustomTargets={useCustomTargets} />
                   })}
                 </div>
               </div>

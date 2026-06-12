@@ -483,7 +483,7 @@ export default function AIAnalysisPage() {
                     return (
                       <div key={key} className="flex justify-between items-center py-1.5 border-b border-slate-50">
                         <span className="text-xs text-slate-600">{label}</span>
-                        <span className="text-xs font-semibold text-slate-900">{Number(value) || 0}{unit}</span>
+                        <span className="text-xs font-semibold text-slate-900">{parseFloat(Number(value || 0).toFixed(3))}{unit}</span>
                       </div>
                     );
                   })}
@@ -500,7 +500,7 @@ export default function AIAnalysisPage() {
                     return (
                       <div key={key} className="flex justify-between items-center py-1.5 border-b border-slate-50">
                         <span className="text-xs text-slate-600">{labelCapitalized}</span>
-                        <span className="text-xs font-semibold text-slate-900">{Number(value) || 0}{unit}</span>
+                        <span className="text-xs font-semibold text-slate-900">{parseFloat(Number(value || 0).toFixed(3))}{unit}</span>
                       </div>
                     );
                   })}
