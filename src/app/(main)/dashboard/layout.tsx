@@ -21,6 +21,7 @@ import {
   User,
   Target,
   Dumbbell,
+  Calculator,
 } from "lucide-react";
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/dashboard/today", label: "Today", icon: ListTodo },
   { href: "/dashboard/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/dashboard/ai-analysis", label: "AI Analysis", icon: Camera },
+  { href: "/dashboard/food-calculator", label: "Food Calculator", icon: Calculator },
   { href: "/dashboard/health", label: "Health", icon: Heart },
   { href: "/dashboard/workouts", label: "Workouts", icon: Dumbbell },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },

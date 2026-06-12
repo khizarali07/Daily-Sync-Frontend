@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { tasksApi, healthApi, aiApi } from '@/lib/api';
 import {
   CalendarDays, ListTodo, Camera, Heart, BarChart3, BookOpen,
-  CheckCircle2, Clock, TrendingUp, Flame, ArrowRight
+  CheckCircle2, Clock, TrendingUp, Flame, ArrowRight, Calculator
 } from 'lucide-react';
 
 interface TaskSummary {
@@ -55,6 +55,7 @@ export default function DashboardPage() {
     { href: '/dashboard/today', label: "Today's Tasks", icon: ListTodo, color: 'from-sky-500 to-blue-600', description: 'View and complete daily tasks' },
     { href: '/dashboard/schedule', label: 'Master Schedule', icon: CalendarDays, color: 'from-violet-500 to-purple-600', description: 'Manage task templates' },
     { href: '/dashboard/ai-analysis', label: 'AI Analysis', icon: Camera, color: 'from-amber-500 to-orange-600', description: 'Analyze food & workouts' },
+    { href: '/dashboard/food-calculator', label: 'Food Calculator', icon: Calculator, color: 'from-teal-500 to-emerald-600', description: 'Calculate exact nutrients' },
     { href: '/dashboard/health', label: 'Health Tracking', icon: Heart, color: 'from-rose-500 to-pink-600', description: 'Log health metrics' },
     { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, color: 'from-emerald-500 to-green-600', description: 'View consistency trends' },
     { href: '/dashboard/journal', label: 'AI Journal', icon: BookOpen, color: 'from-indigo-500 to-blue-600', description: 'AI diary & reflections' },

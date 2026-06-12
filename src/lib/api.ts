@@ -101,7 +101,7 @@ export const tasksApi = {
 // AI API
 export const aiApi = {
   analyzeFood: (image: string) => api.post("/api/ai/analyze-food", { image }),
-  recalculateFood: (foodItems: any[]) => api.post("/api/ai/recalculate-food", { foodItems }),
+  recalculateFood: (foodItems: any[], summary?: string) => api.post("/api/ai/recalculate-food", { foodItems, summary }),
   analyzeWorkout: (image: string) => api.post("/api/ai/analyze-workout", { image }),
   analyzeGeneral: (image: string, prompt?: string) =>
     api.post("/api/ai/analyze-general", { image, prompt }),
