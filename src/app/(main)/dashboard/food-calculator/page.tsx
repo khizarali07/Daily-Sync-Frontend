@@ -283,7 +283,7 @@ export default function FoodCalculatorPage() {
                   </div>
                   <div className="space-y-0.5">
                     {result.vitamins && Object.entries(result.vitamins).map(([key, value]) => {
-                      const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/mcg|mg|iu/gi, '').trim();
+                      const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|iu)$/i, '').trim();
                       const unit = key.toLowerCase().includes('mcg') ? 'mcg' : key.toLowerCase().includes('iu') ? 'IU' : 'mg';
                       return (
                         <div key={key} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 px-2 -mx-2 rounded-lg transition-colors">
@@ -303,7 +303,7 @@ export default function FoodCalculatorPage() {
                   </div>
                   <div className="space-y-0.5">
                     {result.minerals && Object.entries({...result.minerals, ...result.others}).map(([key, value]) => {
-                      const label = key.replace(/([A-Z])/g, ' $1').replace(/mcg|mg|g/gi, '').trim();
+                      const label = key.replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|g)$/i, '').trim();
                       const labelCapitalized = label.charAt(0).toUpperCase() + label.slice(1);
                       const unit = key.toLowerCase().includes('mcg') ? 'mcg' : key.toLowerCase().includes('mg') ? 'mg' : 'g';
                       return (
@@ -337,12 +337,12 @@ export default function FoodCalculatorPage() {
                   <TargetProgress label="Fiber" value={result.macros?.fiber || 0} targetKey="fiber" />
                   
                   {result.vitamins && Object.entries(result.vitamins).map(([key, value]) => {
-                    const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/mcg|mg|iu/gi, '').trim();
+                    const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|iu)$/i, '').trim();
                     return <TargetProgress key={key} label={label} value={Number(value) || 0} targetKey={key} />
                   })}
                   
                   {result.minerals && Object.entries({...result.minerals, ...result.others}).map(([key, value]) => {
-                    const label = key.replace(/([A-Z])/g, ' $1').replace(/mcg|mg|g/gi, '').trim();
+                    const label = key.replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|g)$/i, '').trim();
                     const labelCapitalized = label.charAt(0).toUpperCase() + label.slice(1);
                     return <TargetProgress key={key} label={labelCapitalized} value={Number(value) || 0} targetKey={key} />
                   })}

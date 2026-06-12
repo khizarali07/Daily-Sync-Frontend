@@ -478,7 +478,7 @@ export default function AIAnalysisPage() {
                 <h3 className="font-semibold text-slate-900 mb-3">Vitamins</h3>
                 <div className="grid grid-cols-2 gap-y-2 gap-x-4 max-h-[300px] overflow-y-auto pr-2">
                   {Object.entries(result.vitamins).map(([key, value]) => {
-                    const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/mcg|mg|iu/gi, '').trim();
+                    const label = key.replace('vit', 'Vitamin ').replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|iu)$/i, '').trim();
                     const unit = key.toLowerCase().includes('mcg') ? 'mcg' : key.toLowerCase().includes('iu') ? 'IU' : 'mg';
                     return (
                       <div key={key} className="flex justify-between items-center py-1.5 border-b border-slate-50">
@@ -494,7 +494,7 @@ export default function AIAnalysisPage() {
                 <h3 className="font-semibold text-slate-900 mb-3">Minerals & Others</h3>
                 <div className="grid grid-cols-2 gap-y-2 gap-x-4 max-h-[300px] overflow-y-auto pr-2">
                   {Object.entries({...result.minerals, ...result.others}).map(([key, value]) => {
-                    const label = key.replace(/([A-Z])/g, ' $1').replace(/mcg|mg|g/gi, '').trim();
+                    const label = key.replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|g)$/i, '').trim();
                     const labelCapitalized = label.charAt(0).toUpperCase() + label.slice(1);
                     const unit = key.toLowerCase().includes('mcg') ? 'mcg' : key.toLowerCase().includes('mg') ? 'mg' : 'g';
                     return (
@@ -571,7 +571,7 @@ export default function AIAnalysisPage() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                           {Object.entries({ ...item.nutrients.vitamins, ...item.nutrients.minerals }).slice(0, 8).map(([k, v]: any) => {
                             if (v === 0) return null;
-                            const label = k.replace('vit', 'Vit ').replace(/([A-Z])/g, ' $1').replace(/mcg|mg|iu|g/gi, '').trim();
+                            const label = k.replace('vit', 'Vit ').replace(/([A-Z])/g, ' $1').replace(/\s*(mcg|mg|iu|g)$/i, '').trim();
                             const unit = k.toLowerCase().includes('mcg') ? 'mcg' : k.toLowerCase().includes('mg') ? 'mg' : k.toLowerCase().includes('iu') ? 'IU' : 'g';
                             return (
                               <div key={k} className="flex justify-between border-b border-slate-50 py-0.5">
